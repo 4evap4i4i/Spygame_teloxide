@@ -1,3 +1,3 @@
-mod start;
+mod simple_handlers;
 
-pub use start::{start, echo, Command};
+pub use simple_handlers::{match_command, Command};

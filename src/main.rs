@@ -1,6 +1,6 @@
 use crate::config::Config;
 use teloxide::{prelude::*};
-use handlers::{start, Command, echo};
+use handlers::{match_command, Command};
 
 mod handlers;
 mod config;
@@ -17,11 +17,7 @@ async fn main() {
             .branch(
                 dptree::entry()
                     .filter_command::<Command>()
-                    .endpoint(start),
-            )
-            .branch(
-                dptree::entry()
-                    .endpoint(echo),
+                    .endpoint(match_command),
             );
 
 
@@ -31,5 +27,5 @@ async fn main() {
         .dispatch()
         .await;
 
-    
+
 }
