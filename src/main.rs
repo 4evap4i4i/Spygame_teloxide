@@ -1,7 +1,9 @@
-mod handlers;
-
+use crate::config::Config;
 use teloxide::{prelude::*};
 use handlers::{start, Command, echo};
+
+mod handlers;
+mod config;
 
 #[tokio::main]
 async fn main() {
@@ -9,7 +11,7 @@ async fn main() {
     pretty_env_logger::init();
     log::info!("ы");
 
-    let bot = Bot::from_env();
+    let config = Config::new();
 
     let handler = Update::filter_message()
             .branch(
@@ -22,9 +24,12 @@ async fn main() {
                     .endpoint(echo),
             );
 
-    Dispatcher::builder(bot, handler)
+
+    Dispatcher::builder(config.bot, handler)
         .enable_ctrlc_handler()
         .build()
         .dispatch()
         .await;
+
+    
 }
