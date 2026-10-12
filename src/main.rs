@@ -18,7 +18,8 @@ async fn main() {
                     .endpoint(start),
             )
             .branch(
-                echo,
+                dptree::entry()
+                    .endpoint(echo),
             );
 
     Dispatcher::builder(bot, handler)
