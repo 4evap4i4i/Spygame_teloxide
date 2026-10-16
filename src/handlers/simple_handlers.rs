@@ -1,49 +1,40 @@
 use teloxide::{prelude::*, utils::command::BotCommands, dispatching::dialogue::InMemStorage};
 
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase")]
-pub enum Command {
-    #[command()]
-    Start,
-    #[command()]
-    Play,
-}
+type MyDialogue = Dialogue<State, InMemStorage<State>>;
+type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Clone, Default)]
 pub enum State {
     #[default]
     Start,
-    Started
+    Started {
+        players: Vec<u64>
+    }
 }
 
-pub async fn match_command(bot: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
+#[derive(BotCommands, Clone)]
+#[command(rename_rule = "lowercase")]
+pub enum Command {
+    #[command()]
+    Start,
+}
+
+pub async fn match_command(bot: Bot, msg: Message, cmd: Command, dialogue: MyDialogue) -> HandlerResult {
     match cmd {
-        Command::Start => start(bot, msg).await?,
-        Command::Play => play(bot, msg).await?
+        Command::Start => start(bot, msg, dialogue).await?,
     };
     Ok(())
 }
 
-async fn start(bot: Bot, msg: Message) -> ResponseResult<()> {
+async fn start(bot: Bot, msg: Message, dialogue: MyDialogue) -> HandlerResult {
     if msg.chat.is_group() {
         bot.send_message(msg.chat.id, "siska")
             .await?;
+        dialogue.update(State::Start)
+            .await?
     }
     else {
         bot.send_message(msg.chat.id, "вне группы")
-            .await?;
-    }
-
-    Ok(())
-}
-
-async fn play(bot: Bot, msg: Message) -> ResponseResult<()> {
-    if msg.chat.is_group() {
-        bot.send_message(msg.chat.id, "окща")
-            .await?;
-    }
-    else {
-        bot.send_message(msg.chat.id, "токо в группе")
             .await?;
     }
 

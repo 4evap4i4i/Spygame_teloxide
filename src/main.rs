@@ -1,6 +1,6 @@
 use crate::config::Config;
-use teloxide::{prelude::*};
-use handlers::{match_command, Command};
+use teloxide::{prelude::*, dispatching::dialogue::InMemStorage};
+use handlers::{*};
 
 mod handlers;
 mod config;
@@ -14,10 +14,19 @@ async fn main() {
     let config = Config::new();
 
     let handler = Update::filter_message()
-            .branch(
+            .enter_dialogue::<Message, InMemStorage<State>, State>()
+/*            .branch(
                 dptree::entry()
                     .filter_command::<Command>()
                     .endpoint(match_command),
+            ) 
+*/            .branch(
+                dptree::case![State::Start]
+                .endpoint(play)
+            )
+            .branch(
+                dptree::case![State::Started { players } ]
+                .endpoint(getin)
             );
 
 
