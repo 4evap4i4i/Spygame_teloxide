@@ -14,23 +14,27 @@ async fn main() {
     let config = Config::new();
 
     let handler = Update::filter_message()
-            .enter_dialogue::<Message, InMemStorage<State>, State>()
-/*            .branch(
+            .branch(
                 dptree::entry()
                     .filter_command::<Command>()
                     .endpoint(match_command),
             ) 
-*/            .branch(
+            .enter_dialogue::<Message, InMemStorage<State>, State>()
+            .branch(
                 dptree::case![State::Start]
-                .endpoint(play)
+                    .filter_command::<CommandFsmStart>()
+                    .endpoint(match_start)
             )
             .branch(
-                dptree::case![State::Started { players } ]
-                .endpoint(getin)
+                dptree::case![State::Started { players }]
+                    .filter_command::<CommandFsmStarted>()
+                    .endpoint(match_started)
             );
+            
 
 
     Dispatcher::builder(config.bot, handler)
+        .dependencies(dptree::deps![InMemStorage::<State>::new()])
         .enable_ctrlc_handler()
         .build()
         .dispatch()
