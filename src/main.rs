@@ -13,7 +13,7 @@ async fn main() {
 
     let config = Config::new();
 
-    let handler = Update::filter_message()
+let handler = Update::filter_message()
             .branch(
                 dptree::entry()
                     .filter_command::<Command>()
@@ -29,8 +29,12 @@ async fn main() {
                 dptree::case![State::Started { players }]
                     .filter_command::<CommandFsmStarted>()
                     .endpoint(match_started)
+            )
+            .branch(
+                dptree::case![State::Playin { players }]
+                    .filter_command::<CommandFsmPlayin>()
+                    .endpoint(match_playin)
             );
-            
 
 
     Dispatcher::builder(config.bot, handler)
