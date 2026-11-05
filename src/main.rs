@@ -1,6 +1,7 @@
 use crate::config::Config;
-use teloxide::{prelude::*, dispatching::dialogue::InMemStorage};
+use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks};
 use handlers::{*};
+use std::env;
 
 mod handlers;
 mod config;
@@ -36,12 +37,25 @@ let handler = Update::filter_message()
                     .endpoint(match_playin)
             );
 
+    let port: u16 = env::var("PORT")
+        .expect("PORT env variable is not set")
+        .parse()
+        .expect("PORT env variable value is not an integer");
+
+    let addr = ([0, 0, 0, 0], port).into();
+
+    let host = config.render_url;
+    let url = format!("https://{host}/webhook").parse().unwrap();
+
+    let listener = webhooks::axum(config.bot.clone(), webhooks::Options::new(addr, url))
+        .await
+        .expect("Couldn't setup webhook");
 
     Dispatcher::builder(config.bot, handler)
         .dependencies(dptree::deps![InMemStorage::<State>::new()])
         .enable_ctrlc_handler()
         .build()
-        .dispatch()
+        .dispatch_with_listener(listener, LoggingErrorHandler::with_custom_text("Ошибка в обработчике обновлений"),)
         .await;
 
 
