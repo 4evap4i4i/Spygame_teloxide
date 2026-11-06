@@ -13,6 +13,7 @@ async fn main() {
     log::info!("ы");
 
     let config = Config::new();
+    log::info!("{} , {:?}", config.render_url, env::var("PORT"));
 
 let handler = Update::filter_message()
             .branch(
