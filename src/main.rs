@@ -45,11 +45,11 @@ let handler = Update::filter_message()
     let addr = ([0, 0, 0, 0], port).into();
 
     let host = config.render_url;
-    let url = format!("https://{host}/webhook").parse().unwrap();
+    let url = format!("https://{host}").parse().unwrap();
 
     let listener = webhooks::axum(config.bot.clone(), webhooks::Options::new(addr, url))
         .await
-        .expect("Couldn't setup webhook");
+        .expect("ыыы");
 
     Dispatcher::builder(config.bot, handler)
         .dependencies(dptree::deps![InMemStorage::<State>::new()])
