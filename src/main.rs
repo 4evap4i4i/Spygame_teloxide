@@ -46,7 +46,7 @@ let handler = Update::filter_message()
     let addr = ([0, 0, 0, 0], port).into();
 
     let host = config.render_url;
-    let url = format!("https://{host}").parse().unwrap();
+    let url = format!("{host}/webhook").parse().unwrap();
 
     let listener = webhooks::axum(config.bot.clone(), webhooks::Options::new(addr, url))
         .await
