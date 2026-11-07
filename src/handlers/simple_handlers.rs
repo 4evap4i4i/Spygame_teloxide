@@ -1,6 +1,4 @@
-use std::fmt::format;
-
-use sqlx::{PgPool};
+use sqlx::{PgPool, postgres::PgQueryResult};
 use teloxide::{prelude::*, utils::command::BotCommands};
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -55,19 +53,17 @@ async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResul
             bot.send_message(msg.chat.id, "такая роль уже есть").await?;
         }
         Err(_) => {
-            let res: Result<String, sqlx::Error> = sqlx::query_scalar(
+            let res: Result<PgQueryResult, sqlx::Error> = sqlx::query(
                 "INSERT INTO roles (role) VALUES ($1)"
             )
             .bind(&role)
-            .fetch_one(&pool)
+            .execute(&pool)
             .await;
             
             match res {
                 Ok(_) => bot.send_message(msg.chat.id, format!("роль {role} добавлена")).await?,
                 Err(err) => bot.send_message(msg.chat.id, format!("ошибка {err}")).await?,
             };
-
-            bot.send_message(msg.chat.id, format!("ошибка")).await?;
         }
     }
 
