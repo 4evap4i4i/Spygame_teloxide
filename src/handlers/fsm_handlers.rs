@@ -1,7 +1,6 @@
 use teloxide::{
     dispatching::dialogue::InMemStorage,
     prelude::*,
-    sugar::request::RequestReplyExt,
     types::{ChatId, User},
     utils::command::BotCommands,
 };

@@ -7,7 +7,7 @@ mod handlers;
 mod config;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     dotenvy::dotenv().ok();
     pretty_env_logger::init();
     log::info!("ы");
@@ -15,28 +15,30 @@ async fn main() {
     let config = Config::new();
     log::info!("{} , {:?}", config.render_url, env::var("PORT"));
 
-let handler = Update::filter_message()
-            .branch(
-                dptree::entry()
-                    .filter_command::<Command>()
-                    .endpoint(match_command),
-            ) 
-            .enter_dialogue::<Message, InMemStorage<State>, State>()
-            .branch(
-                dptree::case![State::Start]
-                    .filter_command::<CommandFsmStart>()
-                    .endpoint(match_start)
-            )
-            .branch(
-                dptree::case![State::Started { players }]
-                    .filter_command::<CommandFsmStarted>()
-                    .endpoint(match_started)
-            )
-            .branch(
-                dptree::case![State::Playin { players }]
-                    .filter_command::<CommandFsmPlayin>()
-                    .endpoint(match_playin)
-            );
+    let pool = sqlx::PgPool::connect(&config.db_url).await?;
+
+    let handler = Update::filter_message()
+                .branch(
+                    dptree::entry()
+                        .filter_command::<Command>()
+                        .endpoint(match_command),
+                ) 
+                .enter_dialogue::<Message, InMemStorage<State>, State>()
+                .branch(
+                    dptree::case![State::Start]
+                        .filter_command::<CommandFsmStart>()
+                        .endpoint(match_start)
+                )
+                .branch(
+                    dptree::case![State::Started { players }]
+                        .filter_command::<CommandFsmStarted>()
+                        .endpoint(match_started)
+                )
+                .branch(
+                    dptree::case![State::Playin { players }]
+                        .filter_command::<CommandFsmPlayin>()
+                        .endpoint(match_playin)
+                );
 
     let port: u16 = env::var("PORT")
         .expect("PORT env variable is not set")
@@ -53,11 +55,13 @@ let handler = Update::filter_message()
         .expect("ыыы");
 
     Dispatcher::builder(config.bot, handler)
-        .dependencies(dptree::deps![InMemStorage::<State>::new()])
+        .dependencies(dptree::deps![InMemStorage::<State>::new(), pool.clone()])
         .enable_ctrlc_handler()
         .build()
         .dispatch_with_listener(listener, LoggingErrorHandler::with_custom_text("Ошибка в обработчике обновлений"),)
         .await;
 
+    pool.close().await;
+    Ok(())
 
 }
