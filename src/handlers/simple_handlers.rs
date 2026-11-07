@@ -66,7 +66,6 @@ async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResul
             };
         }
     }
-
-    pool.close().await;
+    
     Ok(())
 }
