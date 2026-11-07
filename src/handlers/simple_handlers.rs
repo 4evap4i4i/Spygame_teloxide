@@ -36,7 +36,8 @@ async fn start(bot: Bot, msg: Message) -> HandlerResult {
 }
 
 async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResult {
-    if !msg.chat.is_group() {
+    if msg.chat.is_group() {
+        bot.send_message(msg.chat.id, "токо в личке").await?;
         return Ok(());
     }
 
@@ -51,8 +52,8 @@ async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResul
         Ok(row) => {
             bot.send_message(msg.chat.id, row).await?;
         }
-        Err(_) => {
-            bot.send_message(msg.chat.id, "ошибка").await?;
+        Err(row) => {
+            bot.send_message(msg.chat.id, format!("ошибка {row}")).await?;
         }
     }
 
