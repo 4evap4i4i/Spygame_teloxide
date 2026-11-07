@@ -1,3 +1,4 @@
+use sqlx::PgPool;
 use teloxide::{
     dispatching::dialogue::InMemStorage,
     prelude::*,
@@ -93,10 +94,10 @@ pub async fn match_start(bot: Bot, msg: Message, cmd: CommandFsmStart, dialogue:
     }
 }
 
-pub async fn match_started(bot: Bot, msg: Message, cmd: CommandFsmStarted, dialogue: MyDialogue, players: Vec<Player>) -> HandlerResult {
+pub async fn match_started(bot: Bot, msg: Message, cmd: CommandFsmStarted, dialogue: MyDialogue, players: Vec<Player>, pool: PgPool) -> HandlerResult {
     match cmd {
         CommandFsmStarted::Getin => getin(bot, dialogue, msg, players).await,
-        CommandFsmStarted::Startgame => startgame(bot, dialogue, msg, players).await,
+        CommandFsmStarted::Startgame => startgame(bot, dialogue, msg, players, pool).await,
         CommandFsmStarted::Cancel => cancel(bot, dialogue, msg, players).await,
     }
 }
@@ -141,13 +142,31 @@ async fn getin(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pl
     Ok(())
 }
 
-async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Player>) -> HandlerResult {
+async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Player>, pool: PgPool) -> HandlerResult {
     let names: Vec<_> = players.iter().map(|p| p.name.as_str()).collect();
     let announcement = format!("йоу игра началась игроки: {}", names.join(" "));
 
     let spy = players.choose_mut(&mut rand::rng()).ok_or("нет игроков")?;
     spy.is_spy = true;
     let spy_id = spy.id as i64;
+
+    let role: Result<String, sqlx::Error> = sqlx::query_scalar(
+        "SELECT * FROM roles WHERE id >= ( SELECT floor(random() * (max(id) - min(id) + 1)) + min(id) FROM roles ) ORDER BY id LIMIT 1;"
+    )
+    .fetch_one(&pool)
+    .await;
+
+    match role {
+        Ok(role) => for player in &players {
+            bot.send_message(ChatId(player.id as i64), format!("Твоя роль: {role}")).await?;
+        },
+        Err(_) => {
+            bot.send_message(msg.chat.id, "ойойойой ошибочка игры не будет").await?;
+
+            dialogue.update(State::Start).await?;
+        }
+    }
+
 
     bot.send_message(msg.chat.id, announcement).await?;
     bot.send_message(ChatId(spy_id), "ты гандон").await?;
