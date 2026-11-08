@@ -9,7 +9,7 @@ use teloxide::{
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
-/// Лимит из оригинала. В официальной доке не подтвердил, см. заметки ниже.
+/// Лимит из оригинала. В официальной доке не подтвердил.
 const MAX_DONATE_STARS: i64 = 2500;
 
 #[derive(BotCommands, Clone)]
@@ -60,15 +60,18 @@ async fn donate(bot: Bot, msg: Message, arg: String) -> HandlerResult {
         return Ok(());
     }
 
+    // Обязательные аргументы: chat_id, title, description, payload, currency, prices.
+    // provider_token опциональный, для Stars задаём пустую строку setter-ом.
     let invoice = bot
         .send_invoice(
             msg.chat.id,
             format!("Донат на сумму {price} звёзд"),
             "Донат",
             "channel_support",
-            "",
-            vec![LabeledPrice::new("XTR", price as u32)],
+            "XTR",
+            vec![LabeledPrice::new("XTR", price.try_into()?)],
         )
+        .provider_token("")
         .reply_markup(pay_keyboard())
         .await;
 
@@ -88,14 +91,13 @@ async fn refund(bot: Bot, msg: Message, charge_id: String) -> HandlerResult {
         return Ok(());
     }
 
-    let Some(user) = msg.from else {
+    let Some(user) = msg.from.as_ref() else {
         return Ok(());
     };
 
-    if let Err(e) = bot
-        .refund_star_payment(user.id, TelegramTransactionId(charge_id.to_owned()))
-        .await
-    {
+    // Предполагаю TelegramTransactionId(pub String), конструктор не проверил.
+    let charge_id = TelegramTransactionId(charge_id.to_owned());
+    if let Err(e) = bot.refund_star_payment(user.id, charge_id).await {
         log::error!("refundStarPayment failed: {e}");
         bot.send_message(
             msg.chat.id,
