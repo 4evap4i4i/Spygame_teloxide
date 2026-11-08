@@ -15,29 +15,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let config = Config::new();
     log::info!("{} , {:?}", config.render_url, env::var("PORT"));
 
-    let handler = Update::filter_message()
-                .branch(Update::filter_pre_checkout_query().endpoint(pre_checkout))
+    let handler = dptree::entry()
+        .branch(Update::filter_pre_checkout_query().endpoint(pre_checkout))
+        .branch(
+            Update::filter_message()
+                .branch(
+                    dptree::entry()
+                        .filter_command::<DonateCommand>()
+                        .endpoint(match_donate),
+                )
+                .branch(Message::filter_successful_payment().endpoint(successful_payment))
                 .branch(
                     dptree::entry()
                         .filter_command::<Command>()
                         .endpoint(match_command),
-                ) 
+                )
                 .enter_dialogue::<Message, InMemStorage<State>, State>()
                 .branch(
                     dptree::case![State::Start]
                         .filter_command::<CommandFsmStart>()
-                        .endpoint(match_start)
+                        .endpoint(match_start),
                 )
                 .branch(
                     dptree::case![State::Started { players }]
                         .filter_command::<CommandFsmStarted>()
-                        .endpoint(match_started)
+                        .endpoint(match_started),
                 )
                 .branch(
                     dptree::case![State::Playin { players }]
                         .filter_command::<CommandFsmPlayin>()
-                        .endpoint(match_playin)
-                );
+                        .endpoint(match_playin),
+                ),
+        );
 
     let port: u16 = env::var("PORT")
         .expect("PORT env variable is not set")
