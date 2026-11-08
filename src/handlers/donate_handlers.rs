@@ -66,8 +66,7 @@ async fn donate(bot: Bot, msg: Message, arg: String) -> HandlerResult {
             format!("Донат на сумму {price} звёзд"),
             "Донат",
             "channel_support",
-            "", // для Telegram Stars provider_token пустой
-            "XTR",
+            "",
             vec![LabeledPrice::new("XTR", price as u32)],
         )
         .reply_markup(pay_keyboard())
@@ -89,7 +88,7 @@ async fn refund(bot: Bot, msg: Message, charge_id: String) -> HandlerResult {
         return Ok(());
     }
 
-    let Some(user) = msg.from() else {
+    let Some(user) = msg.from else {
         return Ok(());
     };
 
