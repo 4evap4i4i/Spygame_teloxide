@@ -151,7 +151,7 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
     let spy_id = spy.id as i64;
 
     let role: Result<String, sqlx::Error> = sqlx::query_scalar(
-        "SELECT * FROM roles WHERE id >= ( SELECT floor(random() * (max(id) - min(id) + 1)) + min(id) FROM roles ) ORDER BY id LIMIT 1;"
+        "SELECT role FROM roles WHERE id >= ( SELECT floor(random() * (max(id) - min(id) + 1)) + min(id) FROM roles ) ORDER BY id LIMIT 1;"
     )
     .fetch_one(&pool)
     .await;
