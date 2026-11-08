@@ -160,8 +160,8 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
         Ok(role) => for player in &players {
             bot.send_message(ChatId(player.id as i64), format!("Твоя роль: {role}")).await?;
         },
-        Err(_) => {
-            bot.send_message(msg.chat.id, "ойойойой ошибочка игры не будет").await?;
+        Err(role) => {
+            bot.send_message(msg.chat.id, format!("ойойойой ошибочка игры не будет {role}")).await?;
 
             dialogue.update(State::Start).await?;
         }
@@ -177,15 +177,10 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
 }
 
 /// Отмена игры из Started и Playin. Только хост.
-async fn cancel(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>) -> HandlerResult {
-    if !is_host(&players, &msg) {
-        bot.send_message(msg.chat.id, "отменить может только хост").await?;
-        return Ok(());
-    }
+async fn cancel(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
 
     dialogue.update(State::Start).await?;
     bot.send_message(msg.chat.id, "игра отменена").await?;
-
     Ok(())
 }
 
