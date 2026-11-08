@@ -98,7 +98,7 @@ pub async fn match_started(bot: Bot, msg: Message, cmd: CommandFsmStarted, dialo
     match cmd {
         CommandFsmStarted::Getin => getin(bot, dialogue, msg, players).await,
         CommandFsmStarted::Startgame => startgame(bot, dialogue, msg, players, pool).await,
-        CommandFsmStarted::Cancel => cancel(bot, dialogue, msg, players).await,
+        CommandFsmStarted::Cancel => cancel(bot, dialogue, msg).await,
     }
 }
 
@@ -106,7 +106,7 @@ pub async fn match_playin(bot: Bot, msg: Message, cmd: CommandFsmPlayin, dialogu
     match cmd {
         CommandFsmPlayin::End => end(bot, dialogue, msg, players).await,
         CommandFsmPlayin::Vote(name) => vote(bot, dialogue, msg, players, name).await,
-        CommandFsmPlayin::Cancel => cancel(bot, dialogue, msg, players).await,
+        CommandFsmPlayin::Cancel => cancel(bot, dialogue, msg).await,
     }
 }
 
