@@ -16,6 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     log::info!("{} , {:?}", config.render_url, env::var("PORT"));
 
     let handler = Update::filter_message()
+                .branch(Update::filter_pre_checkout_query().endpoint(pre_checkout))
                 .branch(
                     dptree::entry()
                         .filter_command::<Command>()
