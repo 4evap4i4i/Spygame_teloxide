@@ -15,8 +15,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let config = Config::new();
     log::info!("{} , {:?}", config.render_url, env::var("PORT"));
 
-    let pool = sqlx::PgPool::connect(&config.db_url).await?;
-
     let handler = Update::filter_message()
                 .branch(
                     dptree::entry()
@@ -50,9 +48,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let host = config.render_url;
     let url = format!("{host}/webhook").parse().unwrap();
 
-    let listener = webhooks::axum(config.bot.clone(), webhooks::Options::new(addr, url))
+    let secret = env::var("WEBHOOK_SECRET").expect("WEBHOOK_SECRET is not set");
+    let options = webhooks::Options::new(addr, url).secret_token(secret);
+    let listener = webhooks::axum(config.bot.clone(), options)
         .await
         .expect("ыыы");
+
+    let pool = sqlx::PgPool::connect(&config.db_url).await?;
 
     Dispatcher::builder(config.bot, handler)
         .dependencies(dptree::deps![InMemStorage::<State>::new(), pool.clone()])
