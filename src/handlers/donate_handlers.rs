@@ -1,114 +1,112 @@
 use teloxide::{
     prelude::*,
     types::{
-        InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, Message, PreCheckoutQuery,
+        InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, ParseMode, PreCheckoutQuery,
         TelegramTransactionId,
     },
-    utils::command::BotCommands,
+    utils::{command::BotCommands, html},
 };
 
+// Должен совпадать с типом ошибки в остальных хендлерах (simple_handlers, fsm_handlers),
+// иначе dptree не соберёт цепочку.
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
-/// Лимит из оригинала. В официальной доке не подтвердил.
-const MAX_DONATE_STARS: i64 = 2500;
+const MAX_STARS: i64 = 2500;
+const INVOICE_PAYLOAD: &str = "channel_support";
 
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase")]
+#[derive(BotCommands, Clone, Debug)]
+#[command(rename_rule = "lowercase", description = "Донаты:")]
 pub enum DonateCommand {
-    #[command(description = "задонатить звёзды: /donate 5")]
+    #[command(description = "задонатить звёзды, например /donate 5")]
     Donate(String),
-    #[command(description = "вернуть донат: /refund <id>")]
+    #[command(description = "вернуть донат по id", hide)]
     Refund(String),
+}
+
+fn pay_keyboard() -> InlineKeyboardMarkup {
+    // Для инвойсов первая кнопка обязана быть Pay.
+    InlineKeyboardMarkup::new([[InlineKeyboardButton::pay("⭐ Донат ⭐")]])
 }
 
 pub async fn match_donate(bot: Bot, msg: Message, cmd: DonateCommand) -> HandlerResult {
     match cmd {
-        DonateCommand::Donate(arg) => donate(bot, msg, arg).await,
-        DonateCommand::Refund(charge_id) => refund(bot, msg, charge_id).await,
+        DonateCommand::Donate(args) => donate(bot, msg, args).await,
+        DonateCommand::Refund(args) => refund(bot, msg, args).await,
     }
 }
 
-async fn donate(bot: Bot, msg: Message, arg: String) -> HandlerResult {
+async fn donate(bot: Bot, msg: Message, args: String) -> HandlerResult {
     if !msg.chat.is_private() {
         bot.send_message(msg.chat.id, "Донатить можно только в личном чате с ботом.")
             .await?;
         return Ok(());
     }
 
-    let price: i64 = match arg.trim().parse() {
-        Ok(price) => price,
-        Err(_) => {
-            bot.send_message(
-                msg.chat.id,
-                "Ты неправильно ввёл сумму доната (например:\n/donate 5\nчтобы задонатить 5 звёзд)",
-            )
-            .await?;
-            return Ok(());
-        }
+    // i64, чтобы отрицательные числа доходили до проверки `<= 0`, а не падали на парсинге.
+    let Ok(price) = args.trim().parse::<i64>() else {
+        bot.send_message(
+            msg.chat.id,
+            "Ты неправильно ввёл сумму доната (например:\n/donate 5\nчтобы задонатить 5 звёзд)",
+        )
+        .await?;
+        return Ok(());
     };
 
+    if price > MAX_STARS {
+        bot.send_message(
+            msg.chat.id,
+            format!("Извини, телеграмм не даёт донатить больше {MAX_STARS} звёзд за раз."),
+        )
+        .await?;
+        return Ok(());
+    }
     if price <= 0 {
         bot.send_message(msg.chat.id, "Ты чо еблан").await?;
         return Ok(());
     }
-    if price > MAX_DONATE_STARS {
-        bot.send_message(
-            msg.chat.id,
-            format!("Извини, телеграмм не даёт донатить больше {MAX_DONATE_STARS} звёзд за раз."),
-        )
-        .await?;
-        return Ok(());
-    }
 
-    // Обязательные аргументы: chat_id, title, description, payload, currency, prices.
-    // provider_token опциональный, для Stars задаём пустую строку setter-ом.
-    let invoice = bot
-        .send_invoice(
-            msg.chat.id,
-            format!("Донат на сумму {price} звёзд"),
-            "Донат",
-            "channel_support",
-            "XTR",
-            vec![LabeledPrice::new("XTR", price.try_into()?)],
-        )
-        .provider_token("")
-        .reply_markup(pay_keyboard())
-        .await;
+    let amount = price as u32; // диапазон 1..=MAX_STARS проверен выше
 
-    if let Err(e) = invoice {
-        log::error!("sendInvoice failed: {e}");
-        bot.send_message(msg.chat.id, "Не получилось создать счёт, попробуй позже.")
-            .await?;
-    }
+    // provider_token для Stars не передаём — в teloxide-core 0.13 он опциональный.
+    bot.send_invoice(
+        msg.chat.id,
+        format!("Донат на сумму {amount} звёзд"),
+        "Донат",
+        INVOICE_PAYLOAD,
+        "XTR",
+        [LabeledPrice::new("XTR", amount)],
+    )
+    .reply_markup(pay_keyboard())
+    .await?;
+
     Ok(())
 }
 
-async fn refund(bot: Bot, msg: Message, charge_id: String) -> HandlerResult {
-    let charge_id = charge_id.trim();
-    if charge_id.is_empty() {
-        bot.send_message(msg.chat.id, "Использование: /refund <id доната>")
-            .await?;
-        return Ok(());
-    }
-
+async fn refund(bot: Bot, msg: Message, args: String) -> HandlerResult {
     let Some(user) = msg.from.as_ref() else {
         return Ok(());
     };
+    let charge_id = TelegramTransactionId::from(args.trim().to_owned());
 
-    // Предполагаю TelegramTransactionId(pub String), конструктор не проверил.
-    let charge_id = TelegramTransactionId(charge_id.to_owned());
-    if let Err(e) = bot.refund_star_payment(user.id, charge_id).await {
-        log::error!("refundStarPayment failed: {e}");
-        bot.send_message(
-            msg.chat.id,
-            format!("Произошла ошибка, может ты неправильно ввёл id доната.\nОшибка: {e}"),
-        )
-        .await?;
+    match bot.refund_star_payment(user.id, charge_id).await {
+        Ok(_) => {
+            bot.send_message(msg.chat.id, "Донат возвращён.").await?;
+        }
+        Err(e) => {
+            log::warn!("refund_star_payment failed: {e}");
+            bot.send_message(
+                msg.chat.id,
+                format!("Произошла ошибка, может ты неправильно ввёл id доната.\nОшибка: {e}"),
+            )
+            .await?;
+        }
     }
+
     Ok(())
 }
 
 pub async fn pre_checkout(bot: Bot, query: PreCheckoutQuery) -> HandlerResult {
+    // Нужно ответить в течение 10 секунд.
     bot.answer_pre_checkout_query(query.id, true).await?;
     Ok(())
 }
@@ -123,14 +121,18 @@ pub async fn successful_payment(bot: Bot, msg: Message) -> HandlerResult {
         "Спасибо большое за донат!\n\nВот команда, если захочешь их вернуть, просто скопируй и отправь сообщением:",
     )
     .await?;
+
+    // <code> — чтобы по тапу текст копировался целиком. Обычный "/refund <id>" Telegram
+    // подсвечивает как команду, и тап отправил бы только "/refund" без аргумента.
     bot.send_message(
         msg.chat.id,
-        format!("/refund {}", payment.telegram_payment_charge_id.0),
+        format!(
+            "<code>/refund {}</code>",
+            html::escape(&payment.telegram_payment_charge_id.0)
+        ),
     )
+    .parse_mode(ParseMode::Html)
     .await?;
-    Ok(())
-}
 
-fn pay_keyboard() -> InlineKeyboardMarkup {
-    InlineKeyboardMarkup::new(vec![vec![InlineKeyboardButton::pay("⭐ Донат ⭐")]])
+    Ok(())
 }
