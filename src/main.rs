@@ -72,8 +72,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .await?;
 
     let listener = webhooks::axum(config.bot.clone(), options)
-        .await?;
-        //.expect("ыыы");
+        .await
+        .expect("ыыы");
 
     let pool = sqlx::PgPool::connect(&config.db_url).await?;
 
