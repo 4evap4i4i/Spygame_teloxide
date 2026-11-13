@@ -63,16 +63,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Явно задаём allowed_updates: teloxide сам этого не делает.
     // Последующий set_webhook внутри webhooks::axum поле не трогает,
-    // так что наш список сохранится.
+    /* 
     config
         .bot
         .set_webhook(options.url.clone())
         .allowed_updates([AllowedUpdate::Message, AllowedUpdate::PreCheckoutQuery])
         .await?;
 
-    // Telegram режет частые setWebhook: второй вызов (внутри webhooks::axum)
+    */
     // сразу после первого получает RetryAfter(1s). Ждём с запасом.
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    //tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     let listener = webhooks::axum(config.bot.clone(), options)
         .await
