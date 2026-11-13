@@ -1,5 +1,5 @@
 use crate::config::Config;
-use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks, payloads::SetWebhookSetters, types::AllowedUpdate};
+use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks};
 use handlers::{*};
 use std::env;
 
@@ -60,19 +60,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let secret = env::var("WEBHOOK_SECRET").expect("WEBHOOK_SECRET is not set");
     let options = webhooks::Options::new(addr, url).secret_token(secret.clone());
-
-    // Явно задаём allowed_updates: teloxide сам этого не делает.
-    // Последующий set_webhook внутри webhooks::axum поле не трогает,
-    /* 
-    config
-        .bot
-        .set_webhook(options.url.clone())
-        .allowed_updates([AllowedUpdate::Message, AllowedUpdate::PreCheckoutQuery])
-        .await?;
-
-    */
-    // сразу после первого получает RetryAfter(1s). Ждём с запасом.
-    //tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     let listener = webhooks::axum(config.bot.clone(), options)
         .await
