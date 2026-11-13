@@ -1,5 +1,7 @@
 use sqlx::{PgPool, postgres::PgQueryResult};
-use teloxide::{prelude::*, utils::command::BotCommands};
+use teloxide::{prelude::*, sugar::request::RequestReplyExt, types::InputFile, utils::command::BotCommands};
+
+use crate::texts::{START_PRIVATE_RU, START_PRIVATE_EN, START_GROUP_EN, START_GROUP_RU};
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -23,13 +25,39 @@ pub async fn match_command(bot: Bot, msg: Message, cmd: Command, pool: PgPool) -
 }
 
 async fn start(bot: Bot, msg: Message) -> HandlerResult {
+    let gif = InputFile::url("https://c.tenor.com/QqVL1Ogea6cAAAAC/tenor.gif".parse().unwrap());
+
     if msg.chat.is_group() {
-        bot.send_message(msg.chat.id, "siska")
-            .await?;
+        let user = msg.from.as_ref().ok_or("Чего")?;
+        let lang = user.language_code.as_deref().unwrap_or("en");
+        
+        if lang.starts_with("ru") {
+            bot.send_animation(msg.chat.id, gif)
+                .caption(START_GROUP_RU)
+                .reply_to(msg.id)
+                .await?;
+        } else {
+            bot.send_animation(msg.chat.id, gif)
+                .caption(START_GROUP_EN)
+                .reply_to(msg.id)
+                .await?;
+        }
     }
     else {
-        bot.send_message(msg.chat.id, "вне группы")
-            .await?;
+        let user = msg.from.as_ref().ok_or("Чего")?;
+        let lang = user.language_code.as_deref().unwrap_or("en");
+
+        if lang.starts_with("ru") {
+            bot.send_animation(msg.chat.id, gif)
+                .caption(START_PRIVATE_RU)
+                .reply_to(msg.id)
+                .await?;
+        } else {
+            bot.send_animation(msg.chat.id, gif)
+                .caption(START_PRIVATE_EN)
+                .reply_to(msg.id)
+                .await?;
+        }
     }
 
     Ok(())

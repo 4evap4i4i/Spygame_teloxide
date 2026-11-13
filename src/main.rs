@@ -3,6 +3,7 @@ use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners
 use handlers::{*};
 use std::env;
 
+mod texts;
 mod handlers;
 mod config;
 
