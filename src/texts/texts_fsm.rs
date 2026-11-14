@@ -1,7 +1,99 @@
+// ---------- /play ----------
+
 pub const PLAY_PRIVATE_RU: &str = r#"Я же сказал: только в группе."#;
+pub const PLAY_PRIVATE_EN: &str = r#"I said: group only."#;
+
+// Используется после имени хоста: "{имя}{PLAY_GROUP}"
 pub const PLAY_GROUP_RU: &str = r#" - хост игры! Только он может её начать 
 Набор в игру начался!
 
 /getin - чтобы вступить в игру (нужно чтобы бот был активирован в личном чате).
 /startgame - чтобы начать игру.
 "#;
+pub const PLAY_GROUP_EN: &str = r#" - is the game host! Only they can start it 
+Players are being gathered!
+
+/getin - to join the game (the bot must be activated in your private chat).
+/startgame - to start the game.
+"#;
+
+// ---------- /getin ----------
+
+// Используются после имени игрока: "{имя}{GETIN_SUCCES}"
+pub const GETIN_SUCCES_RU: &str = r#" - добавлен в игру"#;
+pub const GETIN_SUCCES_EN: &str = r#" - joined the game"#;
+pub const GETIN_ERROR_RU: &str = r#" - уже в игре"#;
+pub const GETIN_ERROR_EN: &str = r#" - is already in the game"#;
+
+// ---------- /startgame ----------
+
+// {players} - имена через пробел
+pub const STARTGAME_ANNOUNCE_RU: &str = r#"йоу игра началась игроки: {players}"#;
+pub const STARTGAME_ANNOUNCE_EN: &str = r#"yo the game has started, players: {players}"#;
+
+// {error} - текст ошибки БД
+pub const STARTGAME_ERROR_RU: &str = r#"ойойойой ошибочка игры не будет {error}"#;
+pub const STARTGAME_ERROR_EN: &str = r#"oops, an error, no game this time: {error}"#;
+
+// {role} - выбранная роль
+pub const ROLE_RU: &str = r#"Твоя роль: {role}"#;
+pub const ROLE_EN: &str = r#"Your role: {role}"#;
+
+pub const SPY_NOTICE_RU: &str = r#"ты гандон"#;
+pub const SPY_NOTICE_EN: &str = r#"you are the spy, you jerk"#;
+
+// ---------- /cancel ----------
+
+pub const CANCEL_NOTHING_RU: &str = r#"нечего отменять"#;
+pub const CANCEL_NOTHING_EN: &str = r#"nothing to cancel"#;
+pub const CANCEL_SUCCESS_RU: &str = r#"игра отменена"#;
+pub const CANCEL_SUCCESS_EN: &str = r#"game cancelled"#;
+
+// ---------- /vote ----------
+
+pub const VOTE_USAGE_RU: &str = r#"напиши так: /vote имя"#;
+pub const VOTE_USAGE_EN: &str = r#"usage: /vote name"#;
+pub const VOTE_NOT_IN_GAME_RU: &str = r#"ты не в игре"#;
+pub const VOTE_NOT_IN_GAME_EN: &str = r#"you are not in the game"#;
+pub const VOTE_ALREADY_RU: &str = r#"ты уже голосовал"#;
+pub const VOTE_ALREADY_EN: &str = r#"you have already voted"#;
+pub const VOTE_NO_SUCH_RU: &str = r#"нет такого игрока"#;
+pub const VOTE_NO_SUCH_EN: &str = r#"no such player"#;
+pub const VOTE_AMBIGUOUS_RU: &str = r#"игроков с таким именем несколько, уточни"#;
+pub const VOTE_AMBIGUOUS_EN: &str = r#"several players have this name, be more specific"#;
+pub const VOTE_SELF_RU: &str = r#"за себя нельзя"#;
+pub const VOTE_SELF_EN: &str = r#"you can't vote for yourself"#;
+
+// {name} - кто проголосовал, {voted}/{total} - прогресс
+pub const VOTE_ACCEPTED_RU: &str = r#"{name} проголосовал ({voted}/{total})"#;
+pub const VOTE_ACCEPTED_EN: &str = r#"{name} has voted ({voted}/{total})"#;
+
+// ---------- /end и итоги ----------
+
+pub const END_NOT_HOST_RU: &str = r#"завершить может только хост"#;
+pub const END_NOT_HOST_EN: &str = r#"only the host can end the game"#;
+
+// {tally} - подсчёт голосов, {spy} - имя шпиона, {verdict} - один из VERDICT_*
+pub const FINISH_TEXT_RU: &str = r#"игра окончена
+
+{tally}
+
+шпион: {spy}
+{verdict}"#;
+pub const FINISH_TEXT_EN: &str = r#"game over
+
+{tally}
+
+spy: {spy}
+{verdict}"#;
+
+pub const VERDICT_NO_VOTES_RU: &str = r#"никто не проголосовал, шпион победил"#;
+pub const VERDICT_NO_VOTES_EN: &str = r#"nobody voted, the spy wins"#;
+pub const VERDICT_TIE_RU: &str = r#"ничья в голосовании, шпион победил"#;
+pub const VERDICT_TIE_EN: &str = r#"the vote is tied, the spy wins"#;
+
+// {name} - игрок, набравший больше всех голосов
+pub const VERDICT_SPY_CAUGHT_RU: &str = r#"{name} - шпион, вы победили"#;
+pub const VERDICT_SPY_CAUGHT_EN: &str = r#"{name} is the spy, you win"#;
+pub const VERDICT_WRONG_RU: &str = r#"посадили {name}, а он не шпион. шпион победил"#;
+pub const VERDICT_WRONG_EN: &str = r#"{name} was jailed, but they are not the spy. The spy wins"#;

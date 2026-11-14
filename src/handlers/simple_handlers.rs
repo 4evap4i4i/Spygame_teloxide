@@ -12,69 +12,55 @@ pub enum Command {
     Add(String),
     #[command()]
     Start,
+    #[command()]
+    Help,
 }
-
-
 
 pub async fn match_command(bot: Bot, msg: Message, cmd: Command, pool: PgPool) -> HandlerResult {
     match cmd {
         Command::Add(role) => add(bot, msg, role, pool).await?,
         Command::Start => start(bot, msg).await?,
+        Command::Help => help(bot, msg).await?,
     };
     Ok(())
 }
 
 async fn start(bot: Bot, msg: Message) -> HandlerResult {
-    let user = msg.from.as_ref().ok_or("Чего")?;
-    let lang = user.language_code.as_deref().unwrap_or("en");
-
+    let ru = is_ru(&msg);
     let gif = InputFile::url("https://c.tenor.com/QqVL1Ogea6cAAAAC/tenor.gif".parse().unwrap());
 
-    if msg.chat.is_group() {
-        let user = msg.from.as_ref().ok_or("Чего")?;
-        let lang = user.language_code.as_deref().unwrap_or("en");
-        
-        if lang.starts_with("ru") {
-            bot.send_animation(msg.chat.id, gif)
-                .caption(START_GROUP_RU)
-                .reply_to(msg.id)
-                .await?;
-        } else {
-            bot.send_animation(msg.chat.id, gif)
-                .caption(START_GROUP_EN)
-                .reply_to(msg.id)
-                .await?;
-        }
-    }
-    else {
+    let caption = if msg.chat.is_group() {
+        tr(ru, START_GROUP_RU, START_GROUP_EN)
+    } else {
+        tr(ru, START_PRIVATE_RU, START_PRIVATE_EN)
+    };
 
-        if lang.starts_with("ru") {
-            bot.send_animation(msg.chat.id, gif)
-                .caption(START_PRIVATE_RU)
-                .reply_to(msg.id)
-                .await?;
-        } else {
-            bot.send_animation(msg.chat.id, gif)
-                .caption(START_PRIVATE_EN)
-                .reply_to(msg.id)
-                .await?;
-        }
-    }
+    bot.send_animation(msg.chat.id, gif)
+        .caption(caption)
+        .reply_to(msg.id)
+        .await?;
 
     Ok(())
 }
 
+async fn help(bot: Bot, msg: Message) -> HandlerResult {
+    bot.send_message(msg.chat.id, tr(is_ru(&msg), HELP_RU, HELP_EN))
+        .await?;
+    Ok(())
+}
+
 async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResult {
-    let user = msg.from.as_ref().ok_or("Чего")?;
-    let lang = user.language_code.as_deref().unwrap_or("en");
+    let ru = is_ru(&msg);
+
     if msg.chat.is_group() {
-        if lang.starts_with("ru") {
-            bot.send_message(msg.chat.id, ADD_GROUP_RU).await?;
-            return Ok(());
-        } else {
-            bot.send_message(msg.chat.id, ADD_GROUP_EN).await?;
-            return Ok(());
-        }
+        bot.send_message(msg.chat.id, tr(ru, ADD_GROUP_RU, ADD_GROUP_EN)).await?;
+        return Ok(());
+    }
+
+    if role.is_empty() {
+        bot.send_message(msg.chat.id, tr(ru, ADD_PRIVATE_EBLAN_RU, ADD_PRIVATE_EBLAN_EN)).await?;
+
+        return Ok(());
     }
 
     let res: Result<String, sqlx::Error> = sqlx::query_scalar(
@@ -86,7 +72,7 @@ async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResul
 
     match res {
         Ok(_) => {
-            bot.send_message(msg.chat.id, "такая роль уже есть").await?;
+            bot.send_message(msg.chat.id, tr(ru, ADD_PRIVATE_FAIL_RU, ADD_PRIVATE_FAIL_EN)).await?;
         }
         Err(_) => {
             let res: Result<PgQueryResult, sqlx::Error> = sqlx::query(
@@ -95,13 +81,20 @@ async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResul
             .bind(&role)
             .execute(&pool)
             .await;
-            
+
             match res {
-                Ok(_) => bot.send_message(msg.chat.id, format!("роль {role} добавлена")).await?,
-                Err(err) => bot.send_message(msg.chat.id, format!("ошибка {err}")).await?,
+                Ok(_) => bot
+                    .send_message(msg.chat.id, tr(ru, ADD_PRIVATE_SUCCES_RU, ADD_PRIVATE_SUCCES_EN))
+                    .await?,
+                Err(err) => bot
+                    .send_message(
+                        msg.chat.id,
+                        format!("{} {err}", tr(ru, ADD_PRIVATE_ERROR_RU, ADD_PRIVATE_ERROR_EN)),
+                    )
+                    .await?,
             };
         }
     }
-    
+
     Ok(())
 }

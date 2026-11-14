@@ -59,6 +59,8 @@ pub enum CommandFsmPlayin {
 pub struct Player {
     id: u64,
     name: String,
+    /// Язык игрока - нужен, чтобы слать ему личные сообщения (роль) на его языке.
+    ru: bool,
     is_spy: bool,
     is_host: bool,
     is_voted: bool,
@@ -70,6 +72,7 @@ impl Player {
         Player {
             id: user.id.0,
             name: user.first_name.clone(),
+            ru: is_ru_user(user),
             is_spy: false,
             is_host,
             is_voted: false,
@@ -89,7 +92,7 @@ pub async fn match_start(bot: Bot, msg: Message, cmd: CommandFsmStart, dialogue:
     match cmd {
         CommandFsmStart::Play => play(bot, dialogue, msg).await,
         CommandFsmStart::Cancel => {
-            bot.send_message(msg.chat.id, "нечего отменять").await?;
+            bot.send_message(msg.chat.id, tr(is_ru(&msg), CANCEL_NOTHING_RU, CANCEL_NOTHING_EN)).await?;
             Ok(())
         }
     }
@@ -112,16 +115,22 @@ pub async fn match_playin(bot: Bot, msg: Message, cmd: CommandFsmPlayin, dialogu
 }
 
 async fn play(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
+    let ru = is_ru(&msg);
+
     if msg.chat.is_group() {
         let host = msg.from.as_ref().ok_or("нет отправителя")?;
         let host_name = &host.first_name;
 
         let players = vec![Player::new(host, true)];
 
-        bot.send_message(msg.chat.id, format!("{host_name} {PLAY_GROUP_RU}")).await?;
+        bot.send_message(
+            msg.chat.id,
+            format!("{host_name}{}", tr(ru, PLAY_GROUP_RU, PLAY_GROUP_EN)),
+        )
+        .await?;
         dialogue.update(State::Started { players }).await?;
     } else {
-        bot.send_message(msg.chat.id, "токо в группе").await?;
+        bot.send_message(msg.chat.id, tr(ru, PLAY_PRIVATE_RU, PLAY_PRIVATE_EN)).await?;
     }
 
     Ok(())
@@ -130,27 +139,41 @@ async fn play(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
 async fn getin(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Player>) -> HandlerResult {
     let user = msg.from.as_ref().ok_or("нет отправителя")?;
     let player = Player::new(user, false);
+    let ru = player.ru;
 
     if players.iter().any(|p| p.id == player.id) {
-        bot.send_message(msg.chat.id, "ты уже в игре").await?;
+        bot.send_message(
+            msg.chat.id,
+            format!("{}{}", player.name, tr(ru, GETIN_ERROR_RU, GETIN_ERROR_EN)),
+        )
+        .await?;
         return Ok(());
     }
 
+    let name = player.name.clone();
     players.push(player);
     dialogue.update(State::Started { players }).await?;
 
-    bot.send_message(msg.chat.id, "добавлен").await?;
+    bot.send_message(
+        msg.chat.id,
+        format!("{name}{}", tr(ru, GETIN_SUCCES_RU, GETIN_SUCCES_EN)),
+    )
+    .await?;
 
     Ok(())
 }
 
 async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Player>, pool: PgPool) -> HandlerResult {
+    let ru = is_ru(&msg);
+
     let names: Vec<_> = players.iter().map(|p| p.name.as_str()).collect();
-    let announcement = format!("йоу игра началась игроки: {}", names.join(" "));
+    let announcement = tr(ru, STARTGAME_ANNOUNCE_RU, STARTGAME_ANNOUNCE_EN)
+        .replace("{players}", &names.join(" "));
 
     let spy = players.choose_mut(&mut rand::rng()).ok_or("нет игроков")?;
     spy.is_spy = true;
     let spy_id = spy.id as i64;
+    let spy_ru = spy.ru;
 
     let role: Result<String, sqlx::Error> = sqlx::query_scalar(
         "SELECT role FROM roles WHERE id >= ( SELECT floor(random() * (max(id) - min(id) + 1)) + min(id) FROM roles ) ORDER BY id LIMIT 1;"
@@ -160,36 +183,45 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
 
     match role {
         Ok(role) => for player in &players {
-            bot.send_message(ChatId(player.id as i64), format!("Твоя роль: {role}")).await?;
+            bot.send_message(
+                ChatId(player.id as i64),
+                tr(player.ru, ROLE_RU, ROLE_EN).replace("{role}", &role),
+            )
+            .await?;
         },
-        Err(role) => {
-            bot.send_message(msg.chat.id, format!("ойойойой ошибочка игры не будет {role}")).await?;
+        Err(err) => {
+            bot.send_message(
+                msg.chat.id,
+                tr(ru, STARTGAME_ERROR_RU, STARTGAME_ERROR_EN).replace("{error}", &err.to_string()),
+            )
+            .await?;
 
             dialogue.update(State::Start).await?;
+            return Ok(());
         }
     }
 
-
     bot.send_message(msg.chat.id, announcement).await?;
-    bot.send_message(ChatId(spy_id), "ты гандон").await?;
+    bot.send_message(ChatId(spy_id), tr(spy_ru, SPY_NOTICE_RU, SPY_NOTICE_EN)).await?;
 
     dialogue.update(State::Playin { players }).await?;
 
     Ok(())
 }
 
-/// Отмена игры из Started и Playin. Только хост.
+/// Отмена игры из Started и Playin.
 async fn cancel(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
-
     dialogue.update(State::Start).await?;
-    bot.send_message(msg.chat.id, "игра отменена").await?;
+    bot.send_message(msg.chat.id, tr(is_ru(&msg), CANCEL_SUCCESS_RU, CANCEL_SUCCESS_EN)).await?;
     Ok(())
 }
 
 async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Player>, name: String) -> HandlerResult {
+    let ru = is_ru(&msg);
+
     let name = name.trim();
     if name.is_empty() {
-        bot.send_message(msg.chat.id, "напиши так: /vote имя").await?;
+        bot.send_message(msg.chat.id, tr(ru, VOTE_USAGE_RU, VOTE_USAGE_EN)).await?;
         return Ok(());
     }
 
@@ -197,12 +229,12 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
 
     // индекс голосующего в списке игроков
     let Some(voter_idx) = players.iter().position(|p| p.id == sender.id.0) else {
-        bot.send_message(msg.chat.id, "ты не в игре").await?;
+        bot.send_message(msg.chat.id, tr(ru, VOTE_NOT_IN_GAME_RU, VOTE_NOT_IN_GAME_EN)).await?;
         return Ok(());
     };
 
     if players[voter_idx].is_voted {
-        bot.send_message(msg.chat.id, "ты уже голосовал").await?;
+        bot.send_message(msg.chat.id, tr(ru, VOTE_ALREADY_RU, VOTE_ALREADY_EN)).await?;
         return Ok(());
     }
 
@@ -218,17 +250,17 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
     let target_idx = match matches.as_slice() {
         [i] => *i,
         [] => {
-            bot.send_message(msg.chat.id, "нет такого игрока").await?;
+            bot.send_message(msg.chat.id, tr(ru, VOTE_NO_SUCH_RU, VOTE_NO_SUCH_EN)).await?;
             return Ok(());
         }
         _ => {
-            bot.send_message(msg.chat.id, "игроков с таким именем несколько, уточни").await?;
+            bot.send_message(msg.chat.id, tr(ru, VOTE_AMBIGUOUS_RU, VOTE_AMBIGUOUS_EN)).await?;
             return Ok(());
         }
     };
 
     if target_idx == voter_idx {
-        bot.send_message(msg.chat.id, "за себя нельзя").await?;
+        bot.send_message(msg.chat.id, tr(ru, VOTE_SELF_RU, VOTE_SELF_EN)).await?;
         return Ok(());
     }
 
@@ -240,11 +272,17 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
 
     if voted == total {
         // проголосовали все - подводим итоги сразу
-        finish_game(&bot, &dialogue, msg.chat.id, players).await
+        finish_game(&bot, &dialogue, &msg, players).await
     } else {
         dialogue.update(State::Playin { players }).await?;
-        bot.send_message(msg.chat.id, format!("{} проголосовал ({}/{})", sender.first_name, voted, total))
-            .await?;
+        bot.send_message(
+            msg.chat.id,
+            tr(ru, VOTE_ACCEPTED_RU, VOTE_ACCEPTED_EN)
+                .replace("{name}", &sender.first_name)
+                .replace("{voted}", &voted.to_string())
+                .replace("{total}", &total.to_string()),
+        )
+        .await?;
         Ok(())
     }
 }
@@ -252,28 +290,29 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
 /// Досрочное завершение голосования. Только хост.
 async fn end(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>) -> HandlerResult {
     if !is_host(&players, &msg) {
-        bot.send_message(msg.chat.id, "завершить может только хост").await?;
+        bot.send_message(msg.chat.id, tr(is_ru(&msg), END_NOT_HOST_RU, END_NOT_HOST_EN)).await?;
         return Ok(());
     }
 
-    finish_game(&bot, &dialogue, msg.chat.id, players).await
+    finish_game(&bot, &dialogue, &msg, players).await
 }
 
 /// Подсчёт голосов, объявление результата, сброс в State::Start.
-async fn finish_game(bot: &Bot, dialogue: &MyDialogue, chat_id: ChatId, players: Vec<Player>) -> HandlerResult {
+async fn finish_game(bot: &Bot, dialogue: &MyDialogue, msg: &Message, players: Vec<Player>) -> HandlerResult {
+    let ru = is_ru(msg);
     let spy = players.iter().find(|p| p.is_spy).ok_or("шпион не найден")?;
 
     let max_votes = players.iter().map(|p| p.votes).max().unwrap_or(0);
     let leaders: Vec<&Player> = players.iter().filter(|p| p.votes == max_votes).collect();
 
     let verdict: String = if max_votes == 0 {
-        "никто не проголосовал, шпион победил".into()
+        tr(ru, VERDICT_NO_VOTES_RU, VERDICT_NO_VOTES_EN).into()
     } else if leaders.len() > 1 {
-        "ничья в голосовании, шпион победил".into()
+        tr(ru, VERDICT_TIE_RU, VERDICT_TIE_EN).into()
     } else if leaders[0].is_spy {
-        format!("{} - шпион, вы победили", leaders[0].name)
+        tr(ru, VERDICT_SPY_CAUGHT_RU, VERDICT_SPY_CAUGHT_EN).replace("{name}", &leaders[0].name)
     } else {
-        format!("посадили {}, а он не шпион. шпион победил", leaders[0].name)
+        tr(ru, VERDICT_WRONG_RU, VERDICT_WRONG_EN).replace("{name}", &leaders[0].name)
     };
 
     let tally = players
@@ -282,8 +321,11 @@ async fn finish_game(bot: &Bot, dialogue: &MyDialogue, chat_id: ChatId, players:
         .collect::<Vec<_>>()
         .join("\n");
 
-    let text = format!("игра окончена\n\n{}\n\nшпион: {}\n{}", tally, spy.name, verdict);
-    bot.send_message(chat_id, text).await?;
+    let text = tr(ru, FINISH_TEXT_RU, FINISH_TEXT_EN)
+        .replace("{tally}", &tally)
+        .replace("{spy}", &spy.name)
+        .replace("{verdict}", &verdict);
+    bot.send_message(msg.chat.id, text).await?;
 
     dialogue.update(State::Start).await?;
 
