@@ -1,7 +1,7 @@
 use sqlx::{PgPool, postgres::PgQueryResult};
 use teloxide::{prelude::*, sugar::request::RequestReplyExt, types::InputFile, utils::command::BotCommands};
 
-use crate::texts::{START_PRIVATE_RU, START_PRIVATE_EN, START_GROUP_EN, START_GROUP_RU};
+use crate::texts::{ADD_GROUP__RU, START_GROUP_EN, START_GROUP_RU, START_PRIVATE_EN, START_PRIVATE_RU};
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -25,6 +25,9 @@ pub async fn match_command(bot: Bot, msg: Message, cmd: Command, pool: PgPool) -
 }
 
 async fn start(bot: Bot, msg: Message) -> HandlerResult {
+    let user = msg.from.as_ref().ok_or("Чего")?;
+    let lang = user.language_code.as_deref().unwrap_or("en");
+
     let gif = InputFile::url("https://c.tenor.com/QqVL1Ogea6cAAAAC/tenor.gif".parse().unwrap());
 
     if msg.chat.is_group() {
@@ -44,8 +47,6 @@ async fn start(bot: Bot, msg: Message) -> HandlerResult {
         }
     }
     else {
-        let user = msg.from.as_ref().ok_or("Чего")?;
-        let lang = user.language_code.as_deref().unwrap_or("en");
 
         if lang.starts_with("ru") {
             bot.send_animation(msg.chat.id, gif)
@@ -64,9 +65,16 @@ async fn start(bot: Bot, msg: Message) -> HandlerResult {
 }
 
 async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResult {
+    let user = msg.from.as_ref().ok_or("Чего")?;
+    let lang = user.language_code.as_deref().unwrap_or("en");
     if msg.chat.is_group() {
-        bot.send_message(msg.chat.id, "токо в личке").await?;
-        return Ok(());
+        if lang.starts_with("ru") {
+            bot.send_message(msg.chat.id, ADD_GROUP__RU).await?;
+            return Ok(());
+        } else {
+            bot.send_message(msg.chat.id, ADD_GROUP__EN).await?;
+            return Ok(());
+        }
     }
 
     let res: Result<String, sqlx::Error> = sqlx::query_scalar(
