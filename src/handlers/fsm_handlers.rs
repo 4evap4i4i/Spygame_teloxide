@@ -181,11 +181,13 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
 
     match role {
         Ok(role) => for player in &players {
-            bot.send_message(
-                ChatId(player.id as i64),
-                tr(player.ru, ROLE_RU, ROLE_EN).replace("{role}", &role),
-            )
-            .await?;
+            if spy_id != player.id as i64 {
+                bot.send_message(
+                    ChatId(player.id as i64),
+                    tr(player.ru, ROLE_RU, ROLE_EN).replace("{role}", &role),
+                )
+                .await?;
+            }
         },
         Err(err) => {
             bot.send_message(
