@@ -1,25 +1,18 @@
 use teloxide::types::{Message, User};
 
-// ---------- helpers ----------
-
-/// Язык пользователя русский? (по language_code, по умолчанию - английский)
 pub fn is_ru_user(user: &User) -> bool {
     user.language_code
         .as_deref()
         .is_some_and(|l| l.starts_with("ru"))
 }
 
-/// Язык отправителя сообщения русский?
 pub fn is_ru(msg: &Message) -> bool {
     msg.from.as_ref().is_some_and(is_ru_user)
 }
 
-/// Выбрать текст по языку.
 pub fn tr(ru: bool, ru_text: &'static str, en_text: &'static str) -> &'static str {
     if ru { ru_text } else { en_text }
 }
-
-// ---------- /start ----------
 
 pub const START_PRIVATE_RU: &str = r#"
 Привет! Это бот для игры в шпиона!
@@ -70,8 +63,6 @@ To start the game simply send /play to the chat.
 /help - see all command
     "#;
 
-// ---------- /help ----------
-
 pub const HELP_RU: &str = r#"Команды бота:
 
 Общие:
@@ -110,8 +101,6 @@ Private chat:
 /donate <number> - donate stars, e.g. /donate 5
 "#;
 
-// ---------- /add ----------
-
 pub const ADD_GROUP_RU: &str = r#"Добавлять роли можно только в личном чате!"#;
 pub const ADD_PRIVATE_SUCCES_RU: &str = r#"Роль добавлена."#;
 pub const ADD_PRIVATE_ERROR_RU: &str = r#"Извини, произошла ошибка: "#;
@@ -124,8 +113,6 @@ pub const ADD_PRIVATE_SUCCES_EN: &str = r#"Role added."#;
 pub const ADD_PRIVATE_ERROR_EN: &str = r#"Sorry, an error occurred: "#;
 pub const ADD_PRIVATE_FAIL_EN: &str = r#"This role already exists"#;
 
-// ---------- /donate, /refund ----------
-
 pub const DONATE_GROUP_RU: &str = r#"Донатить можно только в личном чате с ботом."#;
 pub const DONATE_GROUP_EN: &str = r#"You can donate only in a private chat with the bot."#;
 
@@ -136,14 +123,12 @@ pub const DONATE_BAD_AMOUNT_EN: &str = r#"You entered the donation amount incorr
 /donate 5
 to donate 5 stars)"#;
 
-// {max} - максимальная сумма
 pub const DONATE_TOO_MUCH_RU: &str = r#"Извини, телеграмм не даёт донатить больше {max} звёзд за раз."#;
 pub const DONATE_TOO_MUCH_EN: &str = r#"Sorry, Telegram doesn't allow donating more than {max} stars at once."#;
 
 pub const DONATE_NON_POSITIVE_RU: &str = r#"Ты чо еблан"#;
 pub const DONATE_NON_POSITIVE_EN: &str = r#"Are you dumb? The amount must be positive."#;
 
-// {amount} - количество звёзд
 pub const DONATE_INVOICE_TITLE_RU: &str = r#"Донат на сумму {amount} звёзд"#;
 pub const DONATE_INVOICE_TITLE_EN: &str = r#"Donation of {amount} stars"#;
 pub const DONATE_INVOICE_DESC_RU: &str = r#"Донат"#;
@@ -161,7 +146,6 @@ Here is the command if you want to get the stars back, just copy it and send as 
 pub const REFUND_OK_RU: &str = r#"Донат возвращён."#;
 pub const REFUND_OK_EN: &str = r#"Donation refunded."#;
 
-// {error} - текст ошибки Telegram
 pub const REFUND_ERROR_RU: &str = r#"Произошла ошибка, может ты неправильно ввёл id доната.
 Ошибка: {error}"#;
 pub const REFUND_ERROR_EN: &str = r#"An error occurred, maybe you entered the donation id incorrectly.

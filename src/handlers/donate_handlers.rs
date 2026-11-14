@@ -9,8 +9,6 @@ use teloxide::{
 
 use crate::texts::{*};
 
-// Должен совпадать с типом ошибки в остальных хендлерах (simple_handlers, fsm_handlers),
-// иначе dptree не соберёт цепочку.
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 const MAX_STARS: i64 = 2500;
@@ -26,7 +24,6 @@ pub enum DonateCommand {
 }
 
 fn pay_keyboard(ru: bool) -> InlineKeyboardMarkup {
-    // Для инвойсов первая кнопка обязана быть Pay.
     InlineKeyboardMarkup::new([[InlineKeyboardButton::pay(tr(
         ru,
         DONATE_PAY_BUTTON_RU,
@@ -50,7 +47,6 @@ async fn donate(bot: Bot, msg: Message, args: String) -> HandlerResult {
         return Ok(());
     }
 
-    // i64, чтобы отрицательные числа доходили до проверки `<= 0`, а не падали на парсинге.
     let Ok(price) = args.trim().parse::<i64>() else {
         bot.send_message(msg.chat.id, tr(ru, DONATE_BAD_AMOUNT_RU, DONATE_BAD_AMOUNT_EN))
             .await?;
@@ -75,9 +71,8 @@ async fn donate(bot: Bot, msg: Message, args: String) -> HandlerResult {
         return Ok(());
     }
 
-    let amount = price as u32; // диапазон 1..=MAX_STARS проверен выше
+    let amount = price as u32;
 
-    // provider_token для Stars не передаём — в teloxide-core 0.13 он опциональный.
     bot.send_invoice(
         msg.chat.id,
         tr(ru, DONATE_INVOICE_TITLE_RU, DONATE_INVOICE_TITLE_EN)
@@ -120,7 +115,6 @@ async fn refund(bot: Bot, msg: Message, args: String) -> HandlerResult {
 }
 
 pub async fn pre_checkout(bot: Bot, query: PreCheckoutQuery) -> HandlerResult {
-    // Нужно ответить в течение 10 секунд.
     bot.answer_pre_checkout_query(query.id, true).await?;
     Ok(())
 }
@@ -134,8 +128,6 @@ pub async fn successful_payment(bot: Bot, msg: Message) -> HandlerResult {
     bot.send_message(msg.chat.id, tr(ru, DONATE_THANKS_RU, DONATE_THANKS_EN))
         .await?;
 
-    // <code> — чтобы по тапу текст копировался целиком. Обычный "/refund <id>" Telegram
-    // подсвечивает как команду, и тап отправил бы только "/refund" без аргумента.
     bot.send_message(
         msg.chat.id,
         format!(

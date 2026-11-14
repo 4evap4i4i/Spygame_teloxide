@@ -59,7 +59,6 @@ pub enum CommandFsmPlayin {
 pub struct Player {
     id: u64,
     name: String,
-    /// Язык игрока - нужен, чтобы слать ему личные сообщения (роль) на его языке.
     ru: bool,
     is_spy: bool,
     is_host: bool,
@@ -81,7 +80,6 @@ impl Player {
     }
 }
 
-/// Отправитель сообщения - хост этой игры?
 fn is_host(players: &[Player], msg: &Message) -> bool {
     msg.from
         .as_ref()
@@ -209,7 +207,6 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
     Ok(())
 }
 
-/// Отмена игры из Started и Playin.
 async fn cancel(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
     dialogue.update(State::Start).await?;
     bot.send_message(msg.chat.id, tr(is_ru(&msg), CANCEL_SUCCESS_RU, CANCEL_SUCCESS_EN)).await?;
@@ -227,7 +224,6 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
 
     let sender = msg.from.as_ref().ok_or("нет отправителя")?;
 
-    // индекс голосующего в списке игроков
     let Some(voter_idx) = players.iter().position(|p| p.id == sender.id.0) else {
         bot.send_message(msg.chat.id, tr(ru, VOTE_NOT_IN_GAME_RU, VOTE_NOT_IN_GAME_EN)).await?;
         return Ok(());
@@ -238,7 +234,6 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
         return Ok(());
     }
 
-    // индексы всех игроков с таким именем (регистр не важен)
     let wanted = name.to_lowercase();
     let matches: Vec<usize> = players
         .iter()
@@ -271,7 +266,6 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
     let total = players.len();
 
     if voted == total {
-        // проголосовали все - подводим итоги сразу
         finish_game(&bot, &dialogue, &msg, players).await
     } else {
         dialogue.update(State::Playin { players }).await?;
@@ -287,7 +281,6 @@ async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Pla
     }
 }
 
-/// Досрочное завершение голосования. Только хост.
 async fn end(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>) -> HandlerResult {
     if !is_host(&players, &msg) {
         bot.send_message(msg.chat.id, tr(is_ru(&msg), END_NOT_HOST_RU, END_NOT_HOST_EN)).await?;
@@ -297,7 +290,6 @@ async fn end(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>)
     finish_game(&bot, &dialogue, &msg, players).await
 }
 
-/// Подсчёт голосов, объявление результата, сброс в State::Start.
 async fn finish_game(bot: &Bot, dialogue: &MyDialogue, msg: &Message, players: Vec<Player>) -> HandlerResult {
     let ru = is_ru(msg);
     let spy = players.iter().find(|p| p.is_spy).ok_or("шпион не найден")?;
