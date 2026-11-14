@@ -10,6 +10,7 @@ type MyDialogue = Dialogue<State, InMemStorage<State>>;
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 use rand::prelude::*;
+use crate::texts::{*};
 
 #[derive(Clone, Default)]
 pub enum State {
@@ -112,11 +113,12 @@ pub async fn match_playin(bot: Bot, msg: Message, cmd: CommandFsmPlayin, dialogu
 
 async fn play(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
     if msg.chat.is_group() {
-        // инициатор сразу становится хостом и первым игроком
         let host = msg.from.as_ref().ok_or("нет отправителя")?;
+        let host_name = &host.first_name;
+
         let players = vec![Player::new(host, true)];
 
-        bot.send_message(msg.chat.id, "окща").await?;
+        bot.send_message(msg.chat.id, format!("{host_name} {PLAY_GROUP_RU}")).await?;
         dialogue.update(State::Started { players }).await?;
     } else {
         bot.send_message(msg.chat.id, "токо в группе").await?;

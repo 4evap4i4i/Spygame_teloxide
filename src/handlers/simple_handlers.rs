@@ -1,7 +1,7 @@
 use sqlx::{PgPool, postgres::PgQueryResult};
 use teloxide::{prelude::*, sugar::request::RequestReplyExt, types::InputFile, utils::command::BotCommands};
 
-use crate::texts::{ADD_GROUP__RU, START_GROUP_EN, START_GROUP_RU, START_PRIVATE_EN, START_PRIVATE_RU};
+use crate::texts::{*};
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -69,10 +69,10 @@ async fn add(bot: Bot, msg: Message, role: String, pool: PgPool) -> HandlerResul
     let lang = user.language_code.as_deref().unwrap_or("en");
     if msg.chat.is_group() {
         if lang.starts_with("ru") {
-            bot.send_message(msg.chat.id, ADD_GROUP__RU).await?;
+            bot.send_message(msg.chat.id, ADD_GROUP_RU).await?;
             return Ok(());
         } else {
-            bot.send_message(msg.chat.id, ADD_GROUP__EN).await?;
+            bot.send_message(msg.chat.id, ADD_GROUP_EN).await?;
             return Ok(());
         }
     }
