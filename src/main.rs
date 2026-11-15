@@ -70,14 +70,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let secret = env::var("WEBHOOK_SECRET").expect("WEBHOOK_SECRET is not set");
     let options = webhooks::Options::new(addr, url).secret_token(secret.clone());
-    let webhook_url = options.url.clone();
-
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    //let webhook_url = options.url.clone(); // на случай новых обновлений
 
     let listener = webhooks::axum(config.bot.clone(), options)
         .await
         .expect("ыыы");
     
+    /*на случай новых обновлений
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     config.bot
@@ -89,6 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         ])
         .secret_token(secret)
         .await?;
+    */
 
     let pool = sqlx::PgPool::connect(&config.db_url).await?;
 
