@@ -1,5 +1,5 @@
 use crate::config::Config;
-use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks, types::AllowedUpdate};
+use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks};
 use handlers::{*};
 use std::env;
 
@@ -70,22 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let secret = env::var("WEBHOOK_SECRET").expect("WEBHOOK_SECRET is not set");
     let options = webhooks::Options::new(addr, url).secret_token(secret.clone());
-    let webhook_url = options.url.clone();   // берём из поля: тип url выводится только из Options::new
 
     let listener = webhooks::axum(config.bot.clone(), options)
         .await
         .expect("ыыы");
-
-    // teloxide не передаёт allowed_updates, а Telegram оставляет старый список
-    config.bot
-        .set_webhook(webhook_url)
-        .allowed_updates([
-            AllowedUpdate::Message,
-            AllowedUpdate::CallbackQuery,
-            AllowedUpdate::PreCheckoutQuery,
-        ])
-        .secret_token(secret)
-        .await?;
 
     let pool = sqlx::PgPool::connect(&config.db_url).await?;
 
