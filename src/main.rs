@@ -1,5 +1,7 @@
 use crate::config::Config;
-use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks, types::AllowedUpdate};
+use teloxide::{prelude::*, dispatching::dialogue::InMemStorage, update_listeners::webhooks,
+    //types::AllowedUpdate  // на случай новых обновлений
+};
 use handlers::{*};
 use std::env;
 
