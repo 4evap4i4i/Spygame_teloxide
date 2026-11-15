@@ -19,17 +19,17 @@ pub const GETIN_SUCCES_EN: &str = r#" - joined the game"#;
 pub const GETIN_ERROR_RU: &str = r#" - уже в игре"#;
 pub const GETIN_ERROR_EN: &str = r#" - is already in the game"#;
 
-pub const STARTGAME_ANNOUNCE_RU: &str = r#"йоу игра началась игроки: {players}"#;
-pub const STARTGAME_ANNOUNCE_EN: &str = r#"yo the game has started, players: {players}"#;
+pub const STARTGAME_ANNOUNCE_RU: &str = r#"Йоу, игра началась игроки: {players}"#;
+pub const STARTGAME_ANNOUNCE_EN: &str = r#"Yo! the game has started, players: {players}"#;
 
-pub const STARTGAME_ERROR_RU: &str = r#"ойойойой ошибочка игры не будет {error}"#;
+pub const STARTGAME_ERROR_RU: &str = r#"Ой-ой-ой, ошибочка, игры не будет {error}"#;
 pub const STARTGAME_ERROR_EN: &str = r#"oops, an error, no game this time: {error}"#;
 
 pub const ROLE_RU: &str = r#"Твоя роль: {role}"#;
 pub const ROLE_EN: &str = r#"Your role: {role}"#;
 
-pub const SPY_NOTICE_RU: &str = r#"ты гандон"#;
-pub const SPY_NOTICE_EN: &str = r#"you are the spy, you jerk"#;
+pub const SPY_NOTICE_RU: &str = r#"Ты шпион, не выдай себя!"#;
+pub const SPY_NOTICE_EN: &str = r#"You are the spy, shhh!"#;
 
 pub const CANCEL_NOTHING_RU: &str = r#"нечего отменять"#;
 pub const CANCEL_NOTHING_EN: &str = r#"nothing to cancel"#;
@@ -70,6 +70,8 @@ pub const FINISH_TEXT_EN: &str = r#"game over
 spy: {spy}
 {verdict}"#;
 
+pub const SUSPENSE_RU: &str = "{name} — игрок с наибольшим количеством голосов и";
+pub const SUSPENSE_EN: &str = "{name} got the most votes and";
 pub const VERDICT_NO_VOTES_RU: &str = r#"никто не проголосовал, шпион победил"#;
 pub const VERDICT_NO_VOTES_EN: &str = r#"nobody voted, the spy wins"#;
 pub const VERDICT_TIE_RU: &str = r#"ничья в голосовании, шпион победил"#;
@@ -77,5 +79,5 @@ pub const VERDICT_TIE_EN: &str = r#"the vote is tied, the spy wins"#;
 
 pub const VERDICT_SPY_CAUGHT_RU: &str = r#"{name} - шпион, вы победили"#;
 pub const VERDICT_SPY_CAUGHT_EN: &str = r#"{name} is the spy, you win"#;
-pub const VERDICT_WRONG_RU: &str = r#"посадили {name}, а он не шпион. шпион победил"#;
-pub const VERDICT_WRONG_EN: &str = r#"{name} was jailed, but they are not the spy. The spy wins"#;
+pub const VERDICT_WRONG_RU: &str = r#"Выбрали {name}, и... Он не шпион. Шпион победил"#;
+pub const VERDICT_WRONG_EN: &str = r#"{name} was chosen and... They are not the spy. The spy wins"#;
