@@ -47,6 +47,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         .filter_command::<CommandFsmPlayin>()
                         .endpoint(match_playin),
                 ),
+        )
+        .branch(
+            Update::filter_callback_query()
+                .filter(|q: CallbackQuery| {
+                    q.data.as_deref().is_some_and(|d| d.starts_with("vote:"))
+                })
+                .enter_dialogue::<CallbackQuery, InMemStorage<State>, State>()
+                .branch(dptree::case![State::Playin { players }].endpoint(callback_vote))
+                .endpoint(callback_stale),
         );
 
     let port: u16 = env::var("PORT")

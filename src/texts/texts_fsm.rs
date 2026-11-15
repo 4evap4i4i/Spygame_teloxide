@@ -36,22 +36,23 @@ pub const CANCEL_NOTHING_EN: &str = r#"nothing to cancel"#;
 pub const CANCEL_SUCCESS_RU: &str = r#"игра отменена"#;
 pub const CANCEL_SUCCESS_EN: &str = r#"game cancelled"#;
 
-pub const VOTE_USAGE_RU: &str = r#"напиши так: /vote имя"#;
-pub const VOTE_USAGE_EN: &str = r#"usage: /vote name"#;
+pub const VOTE_PROMPT_RU: &str = r#"кто шпион? жми на кнопку
+проголосовали: {voted}/{total}"#;
+pub const VOTE_PROMPT_EN: &str = r#"who is the spy? press a button
+voted: {voted}/{total}"#;
+pub const VOTE_CLOSED_RU: &str = r#"голосование окончено"#;
+pub const VOTE_CLOSED_EN: &str = r#"voting is over"#;
+pub const VOTE_STALE_RU: &str = r#"это голосование уже закрыто"#;
+pub const VOTE_STALE_EN: &str = r#"this vote is closed"#;
 pub const VOTE_NOT_IN_GAME_RU: &str = r#"ты не в игре"#;
 pub const VOTE_NOT_IN_GAME_EN: &str = r#"you are not in the game"#;
 pub const VOTE_ALREADY_RU: &str = r#"ты уже голосовал"#;
 pub const VOTE_ALREADY_EN: &str = r#"you have already voted"#;
-pub const VOTE_NO_SUCH_RU: &str = r#"нет такого игрока"#;
-pub const VOTE_NO_SUCH_EN: &str = r#"no such player"#;
-pub const VOTE_AMBIGUOUS_RU: &str = r#"игроков с таким именем несколько, уточни"#;
-pub const VOTE_AMBIGUOUS_EN: &str = r#"several players have this name, be more specific"#;
 pub const VOTE_SELF_RU: &str = r#"за себя нельзя"#;
 pub const VOTE_SELF_EN: &str = r#"you can't vote for yourself"#;
 
-pub const VOTE_ACCEPTED_RU: &str = r#"{name} проголосовал ({voted}/{total})"#;
-pub const VOTE_ACCEPTED_EN: &str = r#"{name} has voted ({voted}/{total})"#;
-
+pub const VOTE_ACCEPTED_RU: &str = r#"голос принят"#;
+pub const VOTE_ACCEPTED_EN: &str = r#"vote counted"#;
 
 pub const END_NOT_HOST_RU: &str = r#"завершить может только хост"#;
 pub const END_NOT_HOST_EN: &str = r#"only the host can end the game"#;

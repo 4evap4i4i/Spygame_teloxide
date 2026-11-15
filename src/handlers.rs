@@ -3,5 +3,5 @@ mod fsm_handlers;
 mod donate_handlers;
 
 pub use simple_handlers::{match_command, Command};
-pub use fsm_handlers::{State, match_start, match_started, CommandFsmStart, CommandFsmStarted, CommandFsmPlayin, match_playin};
+pub use fsm_handlers::{State, match_start, match_started, CommandFsmStart, CommandFsmStarted, CommandFsmPlayin, match_playin, callback_stale, callback_vote};
 pub use donate_handlers::{match_donate, pre_checkout, successful_payment, DonateCommand};

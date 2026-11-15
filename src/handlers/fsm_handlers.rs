@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use teloxide::{
     dispatching::dialogue::InMemStorage,
     prelude::*,
-    types::{ChatId, User},
+    types::{CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, User},
     utils::command::BotCommands,
 };
 
@@ -47,8 +47,6 @@ pub enum CommandFsmStart {
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase")]
 pub enum CommandFsmPlayin {
-    #[command()]
-    Vote(String),
     #[command()]
     End,
     #[command()]
@@ -107,7 +105,6 @@ pub async fn match_started(bot: Bot, msg: Message, cmd: CommandFsmStarted, dialo
 pub async fn match_playin(bot: Bot, msg: Message, cmd: CommandFsmPlayin, dialogue: MyDialogue, players: Vec<Player>) -> HandlerResult {
     match cmd {
         CommandFsmPlayin::End => end(bot, dialogue, msg, players).await,
-        CommandFsmPlayin::Vote(name) => vote(bot, dialogue, msg, players, name).await,
         CommandFsmPlayin::Cancel => cancel(bot, dialogue, msg).await,
     }
 }
@@ -204,7 +201,12 @@ async fn startgame(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Ve
     bot.send_message(msg.chat.id, announcement).await?;
     bot.send_message(ChatId(spy_id), tr(spy_ru, SPY_NOTICE_RU, SPY_NOTICE_EN)).await?;
 
+    let keyboard = vote_keyboard(&players);
+    let prompt = vote_prompt(ru, 0, players.len());
+
     dialogue.update(State::Playin { players }).await?;
+
+    bot.send_message(msg.chat.id, prompt).reply_markup(keyboard).await?;
 
     Ok(())
 }
@@ -215,72 +217,103 @@ async fn cancel(bot: Bot, dialogue: MyDialogue, msg: Message) -> HandlerResult {
     Ok(())
 }
 
-async fn vote(bot: Bot, dialogue: MyDialogue, msg: Message, mut players: Vec<Player>, name: String) -> HandlerResult {
-    let ru = is_ru(&msg);
+fn vote_keyboard(players: &[Player]) -> InlineKeyboardMarkup {
+    let rows: Vec<Vec<InlineKeyboardButton>> = players
+        .chunks(2)
+        .map(|pair| {
+            pair.iter()
+                .map(|p| InlineKeyboardButton::callback(p.name.clone(), format!("vote:{}", p.id)))
+                .collect()
+        })
+        .collect();
 
-    let name = name.trim();
-    if name.is_empty() {
-        bot.send_message(msg.chat.id, tr(ru, VOTE_USAGE_RU, VOTE_USAGE_EN)).await?;
-        return Ok(());
-    }
+    InlineKeyboardMarkup::new(rows)
+}
 
-    let sender = msg.from.as_ref().ok_or("нет отправителя")?;
+fn vote_prompt(ru: bool, voted: usize, total: usize) -> String {
+    tr(ru, VOTE_PROMPT_RU, VOTE_PROMPT_EN)
+        .replace("{voted}", &voted.to_string())
+        .replace("{total}", &total.to_string())
+}
 
-    let Some(voter_idx) = players.iter().position(|p| p.id == sender.id.0) else {
-        bot.send_message(msg.chat.id, tr(ru, VOTE_NOT_IN_GAME_RU, VOTE_NOT_IN_GAME_EN)).await?;
-        return Ok(());
+fn lang_of_host(players: &[Player]) -> bool {
+    players.iter().find(|p| p.is_host).map(|p| p.ru).unwrap_or(true)
+}
+
+async fn popup_soft(bot: &Bot, q: &CallbackQuery, text: &str) -> HandlerResult {
+    bot.answer_callback_query(q.id.clone()).text(text).await?;
+    Ok(())
+}
+
+async fn popup_hard(bot: &Bot, q: &CallbackQuery, text: &str) -> HandlerResult {
+    bot.answer_callback_query(q.id.clone()).text(text).show_alert(true).await?;
+    Ok(())
+}
+
+pub async fn callback_vote(bot: Bot, q: CallbackQuery, dialogue: MyDialogue, mut players: Vec<Player>) -> HandlerResult {
+    let ru = is_ru_user(&q.from);
+
+    let Some(target_id) = q
+        .data
+        .as_deref()
+        .and_then(|d| d.strip_prefix("vote:"))
+        .and_then(|id| id.parse::<u64>().ok())
+    else {
+        return popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await;
+    };
+
+    let Some(voter_idx) = players.iter().position(|p| p.id == q.from.id.0) else {
+        return popup_hard(&bot, &q, tr(ru, VOTE_NOT_IN_GAME_RU, VOTE_NOT_IN_GAME_EN)).await;
     };
 
     if players[voter_idx].is_voted {
-        bot.send_message(msg.chat.id, tr(ru, VOTE_ALREADY_RU, VOTE_ALREADY_EN)).await?;
-        return Ok(());
+        return popup_hard(&bot, &q, tr(ru, VOTE_ALREADY_RU, VOTE_ALREADY_EN)).await;
     }
 
-    let wanted = name.to_lowercase();
-    let matches: Vec<usize> = players
-        .iter()
-        .enumerate()
-        .filter(|(_, p)| p.name.to_lowercase() == wanted)
-        .map(|(i, _)| i)
-        .collect();
-
-    let target_idx = match matches.as_slice() {
-        [i] => *i,
-        [] => {
-            bot.send_message(msg.chat.id, tr(ru, VOTE_NO_SUCH_RU, VOTE_NO_SUCH_EN)).await?;
-            return Ok(());
-        }
-        _ => {
-            bot.send_message(msg.chat.id, tr(ru, VOTE_AMBIGUOUS_RU, VOTE_AMBIGUOUS_EN)).await?;
-            return Ok(());
-        }
+    let Some(target_idx) = players.iter().position(|p| p.id == target_id) else {
+        return popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await;
     };
 
     if target_idx == voter_idx {
-        bot.send_message(msg.chat.id, tr(ru, VOTE_SELF_RU, VOTE_SELF_EN)).await?;
-        return Ok(());
+        return popup_soft(&bot, &q, tr(ru, VOTE_SELF_RU, VOTE_SELF_EN)).await;
     }
+
+    let Some(message_id) = q.regular_message().map(|m| m.id) else {
+        return popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await;
+    };
 
     players[target_idx].votes += 1;
     players[voter_idx].is_voted = true;
 
     let voted = players.iter().filter(|p| p.is_voted).count();
     let total = players.len();
+    let chat_id = dialogue.chat_id();
+    let host_ru = lang_of_host(&players);
+
+    popup_soft(&bot, &q, tr(ru, VOTE_ACCEPTED_RU, VOTE_ACCEPTED_EN)).await?;
 
     if voted == total {
-        finish_game(&bot, &dialogue, &msg, players).await
+        bot.edit_message_text(chat_id, message_id, tr(host_ru, VOTE_CLOSED_RU, VOTE_CLOSED_EN))
+            .await?;
+        finish_game(&bot, &dialogue, chat_id, host_ru, players).await
     } else {
+        let keyboard = vote_keyboard(&players);
         dialogue.update(State::Playin { players }).await?;
-        bot.send_message(
-            msg.chat.id,
-            tr(ru, VOTE_ACCEPTED_RU, VOTE_ACCEPTED_EN)
-                .replace("{name}", &sender.first_name)
-                .replace("{voted}", &voted.to_string())
-                .replace("{total}", &total.to_string()),
-        )
-        .await?;
+        bot.edit_message_text(chat_id, message_id, vote_prompt(host_ru, voted, total))
+            .reply_markup(keyboard)
+            .await?;
         Ok(())
     }
+}
+
+pub async fn callback_stale(bot: Bot, q: CallbackQuery) -> HandlerResult {
+    let ru = is_ru_user(&q.from);
+
+    if let Some(m) = q.regular_message() {
+        let _ = bot.edit_message_reply_markup(m.chat.id, m.id).await;
+    }
+
+    popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await
 }
 
 async fn end(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>) -> HandlerResult {
@@ -289,11 +322,10 @@ async fn end(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>)
         return Ok(());
     }
 
-    finish_game(&bot, &dialogue, &msg, players).await
+    finish_game(&bot, &dialogue, msg.chat.id, is_ru(&msg), players).await
 }
 
-async fn finish_game(bot: &Bot, dialogue: &MyDialogue, msg: &Message, players: Vec<Player>) -> HandlerResult {
-    let ru = is_ru(msg);
+async fn finish_game(bot: &Bot, dialogue: &MyDialogue, chat_id: ChatId, ru: bool, players: Vec<Player>) -> HandlerResult {
     let spy = players.iter().find(|p| p.is_spy).ok_or("шпион не найден")?;
 
     let max_votes = players.iter().map(|p| p.votes).max().unwrap_or(0);
@@ -319,7 +351,7 @@ async fn finish_game(bot: &Bot, dialogue: &MyDialogue, msg: &Message, players: V
         .replace("{tally}", &tally)
         .replace("{spy}", &spy.name)
         .replace("{verdict}", &verdict);
-    bot.send_message(msg.chat.id, text).await?;
+    bot.send_message(chat_id, text).await?;
 
     dialogue.update(State::Start).await?;
 
