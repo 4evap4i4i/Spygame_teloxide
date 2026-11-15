@@ -77,8 +77,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let listener = webhooks::axum(config.bot.clone(), options)
         .await
         .expect("ыыы");
+    
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
-    // teloxide не передаёт allowed_updates, а Telegram оставляет старый список
     config.bot
         .set_webhook(webhook_url)
         .allowed_updates([
