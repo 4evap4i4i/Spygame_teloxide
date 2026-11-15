@@ -5,6 +5,8 @@ use teloxide::{
     types::{CallbackQuery, ChatId, InlineKeyboardButton, InlineKeyboardMarkup, User},
     utils::command::BotCommands,
 };
+use tokio::time::sleep;
+use std::time::Duration;
 
 type MyDialogue = Dialogue<State, InMemStorage<State>>;
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -346,9 +348,24 @@ async fn finish_game(bot: &Bot, dialogue: &MyDialogue, chat_id: ChatId, ru: bool
         .replace("{tally}", &tally)
         .replace("{spy}", &spy.name)
         .replace("{verdict}", &verdict);
-    bot.send_message(chat_id, text).await?;
 
     dialogue.update(State::Start).await?;
+
+    if max_votes > 0 && leaders.len() == 1 {
+        let base = tr(ru, SUSPENSE_RU, SUSPENSE_EN).replace("{name}", &leaders[0].name);
+        let msg = bot.send_message(chat_id, base.clone()).await?;
+
+        for dots in 1..=3 {
+            sleep(Duration::from_millis(700)).await;
+            let _ = bot
+                .edit_message_text(chat_id, msg.id, format!("{base}{}", ".".repeat(dots)))
+                .await;
+        }
+
+        sleep(Duration::from_millis(700)).await;
+    }
+
+    bot.send_message(chat_id, text).await?;
 
     Ok(())
 }
