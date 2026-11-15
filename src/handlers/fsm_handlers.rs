@@ -240,13 +240,8 @@ fn lang_of_host(players: &[Player]) -> bool {
     players.iter().find(|p| p.is_host).map(|p| p.ru).unwrap_or(true)
 }
 
-async fn popup_soft(bot: &Bot, q: &CallbackQuery, text: &str) -> HandlerResult {
-    bot.answer_callback_query(q.id.clone()).text(text).await?;
-    Ok(())
-}
-
-async fn popup_hard(bot: &Bot, q: &CallbackQuery, text: &str) -> HandlerResult {
-    bot.answer_callback_query(q.id.clone()).text(text).show_alert(true).await?;
+async fn popup(bot: &Bot, q: &CallbackQuery, text: &str, alert: bool) -> HandlerResult {
+    bot.answer_callback_query(q.id.clone()).text(text).show_alert(alert).await?;
     Ok(())
 }
 
@@ -259,27 +254,27 @@ pub async fn callback_vote(bot: Bot, q: CallbackQuery, dialogue: MyDialogue, mut
         .and_then(|d| d.strip_prefix("vote:"))
         .and_then(|id| id.parse::<u64>().ok())
     else {
-        return popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await;
+        return popup(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN), true).await;
     };
 
     let Some(voter_idx) = players.iter().position(|p| p.id == q.from.id.0) else {
-        return popup_hard(&bot, &q, tr(ru, VOTE_NOT_IN_GAME_RU, VOTE_NOT_IN_GAME_EN)).await;
+        return popup(&bot, &q, tr(ru, VOTE_NOT_IN_GAME_RU, VOTE_NOT_IN_GAME_EN), true).await;
     };
 
     if players[voter_idx].is_voted {
-        return popup_hard(&bot, &q, tr(ru, VOTE_ALREADY_RU, VOTE_ALREADY_EN)).await;
+        return popup(&bot, &q, tr(ru, VOTE_ALREADY_RU, VOTE_ALREADY_EN), true).await;
     }
 
     let Some(target_idx) = players.iter().position(|p| p.id == target_id) else {
-        return popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await;
+        return popup(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN), true).await;
     };
 
     if target_idx == voter_idx {
-        return popup_soft(&bot, &q, tr(ru, VOTE_SELF_RU, VOTE_SELF_EN)).await;
+        return popup(&bot, &q, tr(ru, VOTE_SELF_RU, VOTE_SELF_EN), true).await;
     }
 
     let Some(message_id) = q.regular_message().map(|m| m.id) else {
-        return popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await;
+        return popup(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN), true).await;
     };
 
     players[target_idx].votes += 1;
@@ -290,7 +285,7 @@ pub async fn callback_vote(bot: Bot, q: CallbackQuery, dialogue: MyDialogue, mut
     let chat_id = dialogue.chat_id();
     let host_ru = lang_of_host(&players);
 
-    popup_soft(&bot, &q, tr(ru, VOTE_ACCEPTED_RU, VOTE_ACCEPTED_EN)).await?;
+    popup(&bot, &q, tr(ru, VOTE_ACCEPTED_RU, VOTE_ACCEPTED_EN), false).await?;
 
     if voted == total {
         bot.edit_message_text(chat_id, message_id, tr(host_ru, VOTE_CLOSED_RU, VOTE_CLOSED_EN))
@@ -313,7 +308,7 @@ pub async fn callback_stale(bot: Bot, q: CallbackQuery) -> HandlerResult {
         let _ = bot.edit_message_reply_markup(m.chat.id, m.id).await;
     }
 
-    popup_hard(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN)).await
+    popup(&bot, &q, tr(ru, VOTE_STALE_RU, VOTE_STALE_EN), true).await
 }
 
 async fn end(bot: Bot, dialogue: MyDialogue, msg: Message, players: Vec<Player>) -> HandlerResult {
