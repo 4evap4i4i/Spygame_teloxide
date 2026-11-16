@@ -1,6 +1,7 @@
 use std::env;
 
 use teloxide::prelude::*;
+use teloxide::types::BotCommand;
 
 type HandlerResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -21,6 +22,11 @@ const TEXTS: &[BotTexts] = &[
         description: r#"Это бот для игры в "шпиона" с друзьями! Для игры нужны друзья (к сожалению) и общая группа с ними."#,
         short: r#"Бот для игры в "шпиона" с друзьями! Для игры нужны друзья и общая группа с ними."#,
     },
+];
+
+const COMMANDS: &[(&str, &[(&str, &str)])] = &[
+    ("", &[("start", "Start the bot"), ("play", "Make lobby"), ("help", "Full list of commands")]),
+    ("ru", &[("start", "Запустить бота"), ("play", "Начать набор игроков"),("help", "Все команды")]),
 ];
 
 #[derive(Debug)]
@@ -52,6 +58,19 @@ impl Config {
             description.await?;
             short.await?;
         }
+
+        for (lang, cmds) in COMMANDS {
+            let commands = cmds
+                .iter()
+                .map(|(name, desc)| BotCommand::new(*name, *desc));
+
+            let mut req = self.bot.set_my_commands(commands);
+            if !lang.is_empty() {
+                req = req.language_code(*lang);
+            }
+            req.await?;
+        }
+
         Ok(())
     }
 }
