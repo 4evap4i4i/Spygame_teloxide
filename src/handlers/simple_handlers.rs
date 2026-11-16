@@ -27,20 +27,29 @@ pub async fn match_command(bot: Bot, msg: Message, cmd: Command, pool: PgPool) -
 
 async fn start(bot: Bot, msg: Message) -> HandlerResult {
     let ru = is_ru(&msg);
-    let gif = InputFile::url("https://c.tenor.com/QqVL1Ogea6cAAAAC/tenor.gif".parse().unwrap());
 
-    let caption = if msg.chat.is_group() {
-        tr(ru, START_GROUP_RU, START_GROUP_EN)
-    } else {
-        tr(ru, START_PRIVATE_RU, START_PRIVATE_EN)
-    };
+    if msg.chat.is_group() {
+        let gif = InputFile::url("https://c.tenor.com/ojjiAPMVYwMAAAAd/tenor.gif".parse().unwrap());
+        let caption = tr(ru, START_GROUP_RU, START_GROUP_EN);
 
-    bot.send_animation(msg.chat.id, gif)
-        .caption(caption)
-        .reply_to(msg.id)
+        bot.send_animation(msg.chat.id, gif)
+            .caption(caption)
+            .reply_to(msg.id)
         .await?;
 
     Ok(())
+
+    } else {
+        let gif = InputFile::url("https://c.tenor.com/QqVL1Ogea6cAAAAC/tenor.gif".parse().unwrap());
+        let caption = tr(ru, START_PRIVATE_RU, START_PRIVATE_EN);
+        bot.send_animation(msg.chat.id, gif)
+            .caption(caption)
+            .reply_to(msg.id)
+        .await?;
+
+    Ok(())
+
+    }
 }
 
 async fn help(bot: Bot, msg: Message) -> HandlerResult {
