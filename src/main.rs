@@ -16,6 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     log::info!("ы");
 
     let config = Config::new();
+    config.setup().await?;
     log::info!("{} , {:?}", config.render_url, env::var("PORT"));
 
     let handler = dptree::entry()
