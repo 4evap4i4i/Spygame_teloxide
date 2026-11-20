@@ -97,7 +97,7 @@ Game (group only):
 /cancel - cancel the game
 
 Private chat:
-/add role - add a role to the game
+/add <role> - add a role to the game
 /donate <number> - donate stars, e.g. /donate 5
 "#;
 
@@ -106,7 +106,7 @@ pub const ADD_PRIVATE_SUCCES_RU: &str = r#"Роль добавлена."#;
 pub const ADD_PRIVATE_ERROR_RU: &str = r#"Извини, произошла ошибка: "#;
 pub const ADD_PRIVATE_FAIL_RU: &str = r#"Такая роль уже есть"#;
 pub const ADD_PRIVATE_EBLAN_RU: &str = r#"Ты чо еблан?"#;
-pub const ADD_PRIVATE_EBLAN_EN: &str = r#"You are high or something?"#;
+pub const ADD_PRIVATE_EBLAN_EN: &str = r#"Are you high or something?"#;
 
 pub const ADD_GROUP_EN: &str = r#"Roles can only be added in a private chat!"#;
 pub const ADD_PRIVATE_SUCCES_EN: &str = r#"Role added."#;
@@ -127,7 +127,7 @@ pub const DONATE_TOO_MUCH_RU: &str = r#"Извини, телеграмм не д
 pub const DONATE_TOO_MUCH_EN: &str = r#"Sorry, Telegram doesn't allow donating more than {max} stars at once."#;
 
 pub const DONATE_NON_POSITIVE_RU: &str = r#"Ты чо еблан"#;
-pub const DONATE_NON_POSITIVE_EN: &str = r#"Are you dumb? The amount must be positive."#;
+pub const DONATE_NON_POSITIVE_EN: &str = r#"Wha da fuck is that"#;
 
 pub const DONATE_INVOICE_TITLE_RU: &str = r#"Донат на сумму {amount} звёзд"#;
 pub const DONATE_INVOICE_TITLE_EN: &str = r#"Donation of {amount} stars"#;
