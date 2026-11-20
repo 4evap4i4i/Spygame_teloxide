@@ -19,7 +19,7 @@ pub const GETIN_SUCCES_EN: &str = r#" - joined the game"#;
 pub const GETIN_ERROR_RU: &str = r#" - уже в игре"#;
 pub const GETIN_ERROR_EN: &str = r#" - is already in the game"#;
 
-pub const STARTGAME_ANNOUNCE_RU: &str = r#"Йоу, игра началась игроки: {players}"#;
+pub const STARTGAME_ANNOUNCE_RU: &str = r#"Йоу, игра началась, игроки: {players}"#;
 pub const STARTGAME_ANNOUNCE_EN: &str = r#"Yo! the game has started, players: {players}"#;
 
 pub const STARTGAME_ERROR_RU: &str = r#"Ой-ой-ой, ошибочка, игры не будет {error}"#;
